@@ -2,6 +2,7 @@ import time
 from celery import Celery
 from transformers import LlamaTokenizer, LlamaForCausalLM, pipeline
 import os
+from prompts import PromptWizard_vicuna
 
 # Set the available cuda, 0 is the first gpu, 1 is the second
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -35,7 +36,8 @@ def process_data_task(self, data: str):
     self.update_state(state='STARTED')
 
     # wrap the query
-    query = 'User: ' + data + '\n\n' + 'Assistant:' # for wizard-vicuna-13B template
+    query_template = PromptWizard_vicuna()
+    query = query_template.get_prompt(data)
 
     # Process data and return result
     output = pipe(query)[0]['generated_text']
@@ -47,3 +49,6 @@ def process_data_task(self, data: str):
     print(f"Task ID: {self.request.id} - Result: {result}")
 
     return result
+
+# run in bash
+# celery -A work_wizard_vicuna13bHF worker --loglevel=info --pool=solo
