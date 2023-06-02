@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Processing App</title>
+    <script>
+        async function checkTaskStatus(taskId) {
+            const response = await fetch(`/task/${taskId}`);
+            const statusData = await response.json();
+            if (statusData.status === "completed") {
+                document.getElementById("result").innerText = statusData.result;
+                document.getElementById("state").innerText = "State: SUCCESS";
+                if (statusData.error) {
+                    document.getElementById("error").innerText = `Error: ${statusData.error}`;
+                }
+            } else {
+                document.getElementById("state").innerText = `State: ${statusData.state}`;
+                setTimeout(() => checkTaskStatus(taskId), 1000);
+            }
+        }
+
+        {% if task_id %}
+        checkTaskStatus("{{ task_id }}");
+        {% endif %}
+    </script>
+</head>
+<body>
+    <h1>Text Processing App</h1>
+    <form method="post" action="/">
+        <label for="input_text">Enter text:</label>
+        <br>
+        <textarea id="input_text" name="input_text" rows="10" cols="50">{{ input_text }}</textarea>
+        <br>
+        <button type="submit">Submit</button>
+    </form>
+    {% if task_id %}
+    <h2>Task ID:</h2>
+    <p>{{ task_id }}</p>
+    {% endif %}
+    <h2>State:</h2>
+    <p id="state">{% if task_id %}Processing...{% endif %}</p>
+    <h2>Result:</h2>
+    <p id="result">{% if task_id %}Processing...{% endif %}</p>
+    <h2>Error:</h2>
+    <p id="error"></p>
+    {% if tasks_ahead is defined %}
+    <h2>Tasks ahead:</h2>
+    <p id="tasks_ahead">{{ tasks_ahead }}</p>
+    {% endif %}
+</body>
+</html>
