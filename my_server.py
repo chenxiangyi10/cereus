@@ -19,6 +19,7 @@ templates = Jinja2Templates(directory="templates")
 
 class DataRequest(BaseModel):
     data: str
+    use_template: bool = False
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, result: str = None):
@@ -28,7 +29,7 @@ async def index(request: Request, result: str = None):
 async def index_post(request: Request, input_text: str = Form(...)):
     api_url = "http://paulchen.bio:8000/process"
     async with aiohttp.ClientSession() as session:
-        async with session.post(api_url, json={"data": input_text}) as response:
+        async with session.post(api_url, json={"data": input_text, "use_template": True}) as response:
             if response.status == 200:
                 json_response = await response.json()
                 task_id = json_response.get("task_id")
@@ -51,7 +52,7 @@ async def process_data(request: Request, data_request: DataRequest):
     # Log the incoming request
     logging.info(f"Received request: {await request.json()}")
     
-    task = celery_app.send_task("worker.process_data_task", args=[data_request.data])
+    task = celery_app.send_task("worker.process_data_task", args=[data_request.data, data_request.use_template])
     print(f"Task submitted with ID: {task.id}")
     return {"task_id": task.id}
 

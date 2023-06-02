@@ -31,13 +31,16 @@ pipe = pipeline(
 celery_app = Celery("worker", broker="redis://paulchen.bio:6379/0", backend="redis://paulchen.bio:6379/1")
 
 @celery_app.task(name='worker.process_data_task', bind=True)
-def process_data_task(self, data: str):
+def process_data_task(self, data: str, use_template: bool):
     # Set task state as "STARTED"
     self.update_state(state='STARTED')
 
     # wrap the query
     query_template = PromptWizard_vicuna()
+    query_template.use_template = use_template # if use template, the user-assistant like template will be used; otherwise, the prompt is as it is
     query = query_template.get_prompt(data)
+    print("query_template.use_template:",query_template.use_template)
+    print("query is:",query)
 
     # Process data and return result
     output = pipe(query)[0]['generated_text']

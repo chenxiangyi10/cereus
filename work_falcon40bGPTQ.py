@@ -33,7 +33,7 @@ pipe = pipeline(
 celery_app = Celery("worker", broker="redis://paulchen.bio:6379/0", backend="redis://paulchen.bio:6379/1")
 
 @celery_app.task(name='worker.process_data_task', bind=True)
-def process_data_task(self, data: str):
+def process_data_task(self, data: str) -> str:
     # Set task state as "STARTED"
     self.update_state(state='STARTED')
 
