@@ -2,9 +2,11 @@ import time
 from celery import Celery
 from transformers import pipeline, logging
 import os
-from auto_gptq import AutoGPTQForCausalLM, BaseQuantizeConfig
+from auto_gptq import AutoGPTQForCausalLM
 from transformers import AutoTokenizer
-import argparse
+from prompts import PromptGuanaco
+
+# credit to TheBoke: https://huggingface.co/TheBloke/guanaco-65B-GPTQ/discussions/4
 
 # Set the available cuda, 0 is the first gpu, 1 is the second
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -17,23 +19,15 @@ model_dir = "F:\\guanaco-33B-GPTQ"
 # load tokenizer and base model
 tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=True)
 
-quantize_config = BaseQuantizeConfig(
-        bits=4,
-        group_size=-1, # 128
-        desc_act=False
-    )
-
 model = AutoGPTQForCausalLM.from_quantized(model_dir, 
                                            #model_basename=model_basename, 
                                            use_triton=False, 
                                            use_safetensors=True, 
-                                           quantize_config=quantize_config)
+                                           quantize_config=None)
 
 # Prevent printing spurious transformers error when using pipeline with AutoGPTQ
 logging.set_verbosity(logging.CRITICAL)
 
-
-print("model loaded")
 # create pipeline
 temperature = 0.6
 top_p = 0.95
@@ -56,7 +50,8 @@ def process_data_task(self, data: str) -> str:
     self.update_state(state='STARTED')
 
     # wrap the query
-    query = '### Human: ' + data + '\n' + '### Assistant: the author(s) of this paper is:'
+    query_template = PromptGuanaco()
+    query = query_template.get_prompt(data)
 
     # Process data and return result
     output = pipe(query)[0]['generated_text']
@@ -68,3 +63,6 @@ def process_data_task(self, data: str) -> str:
     print(f"Task ID: {self.request.id} - Result: {result}")
 
     return result
+
+# run in bash
+# celery -A work_Guanaco33bGPTQ worker --loglevel=info --pool=solo

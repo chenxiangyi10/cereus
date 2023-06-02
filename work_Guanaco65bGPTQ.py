@@ -1,13 +1,13 @@
 import time
 from celery import Celery
-from transformers import LlamaTokenizer, LlamaForCausalLM, pipeline, logging
+from transformers import pipeline, logging
 import os
-from auto_gptq import AutoGPTQForCausalLM, BaseQuantizeConfig
+from auto_gptq import AutoGPTQForCausalLM
 from transformers import AutoTokenizer
-import argparse
+from prompts import PromptGuanaco
 
 # Set the available cuda, 0 is the first gpu, 1 is the second
-# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1" # 2 GPUs are needed for 65b
 
 # Specify the model name
 model_dir = "F:\\guanaco-65B-GPTQ"
@@ -16,17 +16,17 @@ model_dir = "F:\\guanaco-65B-GPTQ"
 # load tokenizer and base model
 tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=True)
 
-quantize_config = BaseQuantizeConfig(
-        bits=4,
-        group_size=128,
-        desc_act=False
-    )
+# quantize_config = BaseQuantizeConfig(
+#         bits=4,
+#         group_size=128,
+#         desc_act=False
+#     )
 
 model = AutoGPTQForCausalLM.from_quantized(model_dir, 
                                            #model_basename=model_basename, 
                                            use_triton=False, 
                                            use_safetensors=True, 
-                                           quantize_config=quantize_config)
+                                           quantize_config=None)
 
 # Prevent printing spurious transformers error when using pipeline with AutoGPTQ
 logging.set_verbosity(logging.CRITICAL)
@@ -48,12 +48,13 @@ pipe = pipeline(
 celery_app = Celery("worker", broker="redis://paulchen.bio:6379/0", backend="redis://paulchen.bio:6379/1")
 
 @celery_app.task(name='worker.process_data_task', bind=True)
-def process_data_task(self, data: str):
+def process_data_task(self, data: str) -> str:
     # Set task state as "STARTED"
     self.update_state(state='STARTED')
 
     # wrap the query
-    query = '### Human: ' + data + '\n' + '### Assistant:'
+    query_template = PromptGuanaco()
+    query = query_template.get_prompt(data)
 
     # Process data and return result
     output = pipe(query)[0]['generated_text']
@@ -65,3 +66,6 @@ def process_data_task(self, data: str):
     print(f"Task ID: {self.request.id} - Result: {result}")
 
     return result
+
+# run in bash
+# celery -A work_Guanaco65bGPTQ worker --loglevel=info --pool=solo
