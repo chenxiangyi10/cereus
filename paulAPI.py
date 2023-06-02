@@ -1,11 +1,12 @@
 import requests
 import time
 
-def paulAPI(data: str) -> str:
+def paulAPI(data: str, use_template: bool = True) -> str:
     url = "http://paulchen.bio:8000/process/"
 
     data = {
-        "data": data
+        "data": data,
+        "use_template": use_template
     }
 
     response = requests.post(url, json=data)

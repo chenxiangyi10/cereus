@@ -7,13 +7,13 @@ class Prompt:
             "AI_name": '',
             "separator": '',
         }
-        self.isBare = False
+        self.use_template = True
     def set_prompt_elements(self, user: str = '', ai: str = '', separator: str = '') -> None:
         self.prompt_elements["User_name"] = user
         self.prompt_elements["AI_name"] = ai
         self.prompt_elements["separator"] = separator
     def get_prompt(self, user_message: str, response_prefix: Optional[str] = None) -> str:
-        if self.isBare:
+        if not self.use_template:
             return user_message
         if response_prefix is None:
             prompt = f"{self.prompt_elements['User_name']}: {user_message}{self.prompt_elements['separator']}{self.prompt_elements['AI_name']}:"
