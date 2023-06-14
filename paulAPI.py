@@ -1,12 +1,13 @@
 import requests
 import time
+from typing import Dict
 
-def paulAPI(data: str, use_template: bool = True) -> str:
+def paulAPI(prompt: str, outputSet : Dict = {}) -> str:
     url = "http://paulchen.bio:8000/process/"
 
     data = {
-        "data": data,
-        "use_template": use_template
+        "data": prompt,
+        "outputSet": outputSet
     }
 
     response = requests.post(url, json=data)
